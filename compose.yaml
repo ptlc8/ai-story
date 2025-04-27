@@ -1,0 +1,17 @@
+services:
+  server:
+    build: server
+    environment:
+      POSTGRES_HOSTNAME: database
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: secret
+    ports:
+      - 80
+    restart: always
+    labels:
+      - webproxy.path=ai-story
+  database:
+    build: database
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: secret

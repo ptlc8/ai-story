@@ -6,7 +6,12 @@ const port = process.env.PORT ?? '80';
 
 const app = Express();
 
-app.get('/api/step/{:hash}', (req, res) => {
+app.use(Express.static('static'));
+
+app.set('view engine', 'ejs');
+app.set('views', 'views');
+
+app.get('/{:hash}', (req, res) => {
     const hash = req.params.hash || '';
     const option = req.query.option;
     var stepPromise = option
@@ -15,13 +20,13 @@ app.get('/api/step/{:hash}', (req, res) => {
     stepPromise
         .then(step => {
             if (step)
-                res.json(step);
+                res.render('step', { step });
             else
-                res.status(404).json({ message: 'Step not found' });
+                res.status(404).render('error', { message: 'Step not found' });
         })
         .catch(err => {
             console.error(err);
-            res.status(500).json({ message: 'Internal server error' });
+            res.status(500).render('error', { message: 'Internal server error' });
         });
 });
 

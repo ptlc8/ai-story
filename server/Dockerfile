@@ -7,7 +7,7 @@ COPY package*.json ./
 RUN npm ci
 
 # Copy the code
-COPY *.js ./
+COPY . .
 
 # Expose the port
 EXPOSE 80

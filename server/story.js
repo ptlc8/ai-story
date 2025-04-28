@@ -23,13 +23,17 @@ export async function getStep(hash) {
     let step;
     await withDatabase(async client => {
         let result = await client.query('SELECT Step.description, hash, previous_step_hash, Option.description AS option FROM Step LEFT JOIN Option ON step_hash = hash WHERE hash = $1', [hash]);
-        step = result.rows.reduce((step, row) => step.options.push(row.option) && step, { ...result.rows[0], options: [] });
+        if (result.rows.length == 0) {
+            step = null
+        } else {
+            step = result.rows.reduce((step, row) => step.options.push(row.option) && step, { ...result.rows[0], options: [] });
+        }
     });
     return step;
 }
 
 
-export async function getNextStep(hash, option) {
+export async function getNextStep(hash, optionIndex) {
 
 }
 

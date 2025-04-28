@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+    <title>Étape</title>
+</head>
+<body>
+    <%_ if (step.previous_step_hash) { _%>
+    <a href="<%= step.previous_step_hash %>">Précédente</a>
+    <%_ } _%>
+    <h1>Étape</h1>
+    <p><%= step.description %></p>
+    <ul>
+        <%_ step.options.forEach((option, index) => { _%>
+        <li>
+            <a href="?option=<%= index %>"><%= option %></a>
+        </li>
+        <%_ }); _%>
+    </ul>
+</body>
+</html>

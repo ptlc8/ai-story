@@ -9,8 +9,10 @@ CREATE TABLE IF NOT EXISTS Step (
 
 -- Création de la table "Option"
 CREATE TABLE IF NOT EXISTS Option (
+    index SMALLINT, -- L'indice de l'option (unique par étape)
     step_hash VARCHAR(32), -- Le hash de l'étape associé
     description TEXT, -- Le texte associé à l'option
+    PRIMARY KEY (index, step_hash),
     FOREIGN KEY (step_hash) REFERENCES Step(hash) -- Clé étrangère vers la table "Step"
 );
 
@@ -21,8 +23,8 @@ VALUES
 Le sable est tiède sous vos doigts. Le vent salé vous caresse le visage.
 À l''horizon, l''océan s''étend à perte de vue. Derrière vous, une jungle dense murmure doucement.', '');
 
-INSERT INTO Option (step_hash, description) VALUES
-    ('', 'Je me lève et observe les alentours'),
-    ('', 'Je m''enfonce prudemment dans la jungle'),
-    ('', 'Je longe la plage à la recherche de traces ou d''abris'),
-    ('', 'Je ramasse ce que je trouve sur la plage pour m''équiper');
+INSERT INTO Option (index, step_hash, description) VALUES
+    (0, '', 'Je me lève et observe les alentours'),
+    (1, '', 'Je m''enfonce prudemment dans la jungle'),
+    (2, '', 'Je longe la plage à la recherche de traces ou d''abris'),
+    (3, '', 'Je ramasse ce que je trouve sur la plage pour m''équiper');

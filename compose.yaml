@@ -5,6 +5,7 @@ services:
       POSTGRES_HOSTNAME: database
       POSTGRES_USERNAME: postgres
       POSTGRES_PASSWORD: secret
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY?}
     ports:
       - 80
     restart: always

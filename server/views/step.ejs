@@ -11,7 +11,9 @@
     <a href="<%= step.previous_step_hash %>">Précédente</a>
     <%_ } _%>
     <h1>Étape</h1>
-    <p><%= step.description %></p>
+    <%_ for (let paragraph of step.description.split('\n')) { _%>
+    <p><%= paragraph %></p>
+    <%_ } _%>
     <ul>
         <%_ step.options.forEach((option, index) => { _%>
         <li>

@@ -1,56 +1,64 @@
 import crypto from 'crypto';
-import { Client as PgClient } from 'pg';
+import { queryDatabase } from './database.js';
 import { complete } from './mistral-llm.js';
 
 import 'dotenv/config';
 
 
-function withDatabase(f) {
-    const client = new PgClient({
-        host: process.env.POSTGRES_HOSTNAME,
-        port: 5432,
-        user: process.env.POSTGRES_USERNAME,
-        password: process.env.POSTGRES_PASSWORD,
-        database: process.env.POSTGRES_USERNAME
-    });
-    return client.connect()
-        .then(() => f(client))
-        .finally(() => client.end());
-}
-
-
 export async function getStep(hash) {
-    let step;
-    await withDatabase(async client => {
-        let result = await client.query('SELECT Step.description, hash, previous_step_hash, Option.description AS option FROM Step LEFT JOIN Option ON step_hash = hash WHERE hash = $1', [hash]);
-        if (result.rows.length == 0) {
-            step = null
-        } else {
-            step = result.rows.reduce((step, row) => step.options.push(row.option) && step, { ...result.rows[0], options: [] });
-        }
-    });
+    let rows = await queryDatabase('SELECT Step.description, hash, previous_step_hash, Option.description AS option FROM Step LEFT JOIN Option ON step_hash = hash WHERE hash = $1 ORDER BY index', [hash]);
+    if (rows.length == 0)
+        return null;
+    let step = rows.reduce((step, row) => step.options.push(row.option) && step, { ...rows[0], options: [] });
     return step;
 }
 
 
 export async function getNextStep(hash, optionIndex) {
-
+    let nextHash = hashStep(hash, optionIndex);
+    let nextStep = await getStep(nextHash);
+    if (nextStep)
+        return nextStep;
+    let step = await getStep(hash);
+    if (!step || !step.options[optionIndex])
+        return null;
+    let generatedStep = await generateNextStep(step.description, step.context, step.options[optionIndex]);
+    generatedStep.hash = nextHash;
+    generatedStep.previous_step_hash = hash;
+    await queryDatabase('INSERT INTO Step (hash, previous_step_hash, description, context) VALUES ($1, $2, $3, $4)', [nextHash, hash, generatedStep.description, generatedStep.context]);
+    generatedStep.options.forEach(async (option, index) => {
+        await queryDatabase('INSERT INTO Option (index, step_hash, description) VALUES ($1, $2, $3)', [index, nextHash, option]);
+    });
+    return generatedStep;
 }
 
 
-function hashStep(previousStepHash, option) {
-    const raw = `${previousStepHash}|${option}`;
+function hashStep(previousStepHash, optionIndex) {
+    const raw = `${previousStepHash}|${optionIndex}`;
     return crypto.createHash('md5').update(raw).digest('hex');
 }
 
 
-`Tu es le maitre du jeu, tu donnes des explications courtes et donne des propositions
-Voici les infos retenus : "Infos à retenir : une crique abritée est visible, la mer est calme, une mouette est présente"
-"Vous scrutez l’horizon, mais il n’y a ni cabane, ni fumée, ni trace humaine. En longeant la plage vers les rochers, vous remarquez une petite crique partiellement abritée par une paroi rocheuse. Cela pourrait faire un bon abri temporaire. Une mouette vous survole en criant."
-L'utilisateur a choisi : "Rester sur la plage et attendre un éventuel secours"
+async function generateNextStep(description, context, optionDescription) {
+    let prompt = `Tu es le maitre du jeu, tu donnes des explications courtes et donne des propositions
+Voici les infos retenus : "${context}"
+"${description}"
+L'utilisateur a choisi : "${optionDescription}"
 Tu repondras avec cette forme :
 une explication
 ---
 des propositions (une par ligne)
 ---
-éventuellement des infos à retenir pour la suite de l'histoire ou le mot rien`
+éventuellement des infos à retenir pour la suite de l'histoire ou le mot rien`;
+    while (true) {
+        let response = await complete(prompt);
+        let parts = response.split(/\W*\n---\n\W*/);
+        if (parts.length < 2)
+            continue;
+        return {
+            description: parts[0],
+            options: parts[1].split('\n'),
+            context: parts[2]
+        }
+    }
+}
